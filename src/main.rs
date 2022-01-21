@@ -93,9 +93,9 @@ fn main() -> anyhow::Result<()> {
                 } else if typos == 1 && curr_first_char == first_char {
                     count += 1;
                 } else if typos == 2 {
-                    // We consider a typos on the first char as 2 typos, so we either:
-                    // - 2 typos elsewhere or,
-                    // - accept 1 typo on the first char
+                    // We consider 1 typo on the first char as 2 typos, so we either accept:
+                    // - 2 typos in the tail of the words or,
+                    // - 1 typo on the first char
                     if curr_first_char == first_char {
                         count += 1;
                     } else if dfa.distance(state).to_u8() < 2 {
