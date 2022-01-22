@@ -5,7 +5,6 @@ use std::time::Instant;
 use clap::{Parser, Subcommand};
 use fst::automaton::Str;
 use fst::{Automaton, IntoStreamer, Streamer};
-use fst_regex::Regex;
 use levenshtein_automata::LevenshteinAutomatonBuilder;
 use memmap2::Mmap;
 
@@ -132,7 +131,7 @@ fn main() -> anyhow::Result<()> {
                     let (first_char, tail) = split_first_char(&prefix);
 
                     let before = Instant::now();
-                    let any_first_char_exact_tail = Regex::new(&format!(".{}", tail)).unwrap();
+                    let any_first_char_exact_tail = AnyFirstByteStr::new(tail).starts_with();
                     let two_typos_dfa = dfa_two_typos_builder.build_prefix_dfa(&prefix);
                     eprintln!("dfa creation took {:.02?}", before.elapsed());
 
@@ -216,4 +215,57 @@ fn main() -> anyhow::Result<()> {
 fn split_first_char(s: &str) -> (&str, &str) {
     let c = s.chars().next().unwrap();
     s.split_at(c.len_utf8())
+}
+
+#[derive(Clone, Debug)]
+pub struct AnyFirstByteStr<'a> {
+    string: &'a [u8],
+}
+
+impl<'a> AnyFirstByteStr<'a> {
+    /// Constructs automaton that matches any first char followed by the given exact string.
+    #[inline]
+    pub fn new(string: &'a str) -> AnyFirstByteStr<'a> {
+        AnyFirstByteStr { string: string.as_bytes() }
+    }
+}
+
+impl<'a> Automaton for AnyFirstByteStr<'a> {
+    type State = Option<usize>;
+
+    #[inline]
+    fn start(&self) -> Option<usize> {
+        Some(0)
+    }
+
+    #[inline]
+    fn is_match(&self, pos: &Option<usize>) -> bool {
+        // As we ignore the first char we must not forget
+        // that the original string to match is length + 1
+        *pos == Some(self.string.len() + 1)
+    }
+
+    #[inline]
+    fn can_match(&self, pos: &Option<usize>) -> bool {
+        pos.is_some()
+    }
+
+    #[inline]
+    fn accept(&self, pos: &Option<usize>, byte: u8) -> Option<usize> {
+        // if we aren't already past the end...
+        if let Some(pos) = *pos {
+            // and we are checking for the first byte, that's always true...
+            if pos == 0 {
+                return Some(1);
+            }
+
+            // or if there is still a matching byte at the current position + 1...
+            if self.string.get(pos - 1).cloned() == Some(byte) {
+                // then move forward
+                return Some(pos + 1);
+            }
+        }
+        // otherwise we're either past the end or didn't match the byte
+        None
+    }
 }
