@@ -11,6 +11,9 @@ fst = "0.4.7"
 levenshtein_automata = { version = "0.2.1", features = ["fst_automaton"] }
 memmap2 = "0.5.2"
 
+# A version of fst-regex which depends on fst 0.4.7 instead of an old 0.3.1.
+fst-regex = { path = "../fst/fst-regex" }
+
 [patch.crates-io]
 # A patched version of the fst starting from:
 # https://github.com/MarinPostma/fst/commit/ad1f72e5f5341344ad6505460be879d10c784541
